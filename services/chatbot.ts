@@ -1,16 +1,41 @@
+"use client";
 import { useLoadingPromise } from "@/utils/useLoadingPromise";
 import useUpdateEffect from "@/utils/useUpdateEffect";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { useAuth } from "@/context/AuthContext";
+import { db } from "@/services/firebase"; // Asegúrate de exportar tu instancia de Firestore
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  getDocs,
+  deleteDoc,
+} from "firebase/firestore";
 
-const handleGemini = async (text: string) => {
+const handleGemini = async (messages: Message[], currentPrompt: string) => {
   if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
     throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is required");
   }
   const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-  const result = await model.generateContent(text);
+  const fullMessages = [
+    ...messages.slice(-4), // Only use the last 4 messages for context
+    {
+      id: uuidv4(),
+      origin: "user",
+      message: currentPrompt,
+      postedAt: new Date().toISOString(),
+    },
+  ];
+  const context = fullMessages
+    .map((msg) => `${msg.origin}: ${msg.message}`)
+    .join("\n");
+
+  const result = await model.generateContent(context);
   const response = await result.response;
   const data = await response.text();
   return data;
@@ -25,26 +50,82 @@ export interface Message {
 
 export const useChatBot = () => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const { user } = useAuth();
 
-  const { execute, data, loading, error, submitted, reset } = useLoadingPromise<
-    string,
-    string
-  >(async (message: string) => {
-    return handleGemini(message);
-  });
+  const guestId = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    let id = window.localStorage.getItem("guestId");
+    if (!id) {
+      id = uuidv4();
+      window.localStorage.setItem("guestId", id);
+    }
+    return id;
+  }, []);
+
+  const collectionPath = useMemo(
+    () => (user ? `users/${user.uid}/messages` : `guests/${guestId}/messages`),
+    [user, guestId]
+  );
+
+  // Send a message to the bot handler
+  const { execute, data, loading, error } = useLoadingPromise(
+    async (message: string) => {
+      await addMessage(message, "user");
+      return handleGemini(messages, message);
+    }
+  );
 
   const addMessage = useCallback(
-    (message: string, origin: "user" | "bot") => {
+    async (message: string, origin: "user" | "bot") => {
       const newMessage: Message = {
         id: uuidv4(),
         origin,
         message,
         postedAt: new Date().toISOString(),
       };
-      setMessages([...messages, newMessage]);
+      try {
+        await addDoc(collection(db, collectionPath), newMessage);
+      } catch (error) {
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          newMessage,
+          {
+            id: uuidv4(),
+            origin: "bot",
+            message:
+              "I'm sorry, I couldn't save your message however I will answer you.",
+            postedAt: new Date().toISOString(),
+          },
+        ]);
+      }
     },
-    [messages]
+    [collectionPath]
   );
+
+  useEffect(() => {
+    const q = query(collection(db, collectionPath), orderBy("postedAt"));
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const loadedMessages: Message[] = [];
+      querySnapshot.forEach((doc) => {
+        loadedMessages.push(doc.data() as Message);
+      });
+      setMessages(loadedMessages);
+    });
+    return () => unsubscribe();
+  }, [guestId, user]);
+
+  // Clear all messages from the chat
+  const clearMessages = useCallback(async () => {
+    const messagesRef = collection(db, collectionPath);
+    const querySnapshot = await getDocs(messagesRef);
+    const deletePromises = querySnapshot.docs.map((doc) => deleteDoc(doc.ref));
+    try {
+      await Promise.all(deletePromises);
+      setMessages([]);
+    } catch (error) {
+      addMessage("I'm sorry, I couldn't clear the chat.", "bot");
+    }
+  }, [collectionPath]);
 
   useUpdateEffect(() => {
     if (data) {
@@ -76,6 +157,6 @@ export const useChatBot = () => {
     addMessage,
     sendMessageToBot: execute,
     loadingResponse: loading,
-    submittedMessige: submitted,
+    clearMessages,
   };
 };

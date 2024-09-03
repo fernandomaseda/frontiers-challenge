@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 
-export function useLoadingPromise<T, K>(
-  func: (...args: K[]) => Promise<T>
+export function useLoadingPromise<T, K extends any[]>(
+  func: (...args: K) => Promise<T>
 ): {
-  execute: (...args: K[]) => Promise<T | void>;
+  execute: (...args: K) => Promise<T | void>;
   data: T | null;
   loading: boolean;
   error: Error | null;
@@ -16,7 +16,7 @@ export function useLoadingPromise<T, K>(
   const [submitted, setSubmitted] = useState(false);
 
   const execute = useCallback(
-    (...args: Parameters<typeof func>) => {
+    (...args: K) => {
       setError(null);
       setLoading(true);
       return func(...args)

@@ -41,11 +41,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           style={{ minHeight: "44px", maxHeight: "120px" }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleSubmit(e);
+            }
+          }}
         />
         <button
           type="submit"
           className="absolute right-2 bottom-2 bg-secondary text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-opacity-90 transition-all duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-opacity-50"
           aria-label="Send message"
+          disabled={isLoading}
         >
           {!isLoading ? (
             <svg

@@ -1,6 +1,10 @@
+"use client";
 import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
 
 export const Navbar: React.FC = () => {
+  const { user, loginWithGoogle, logOut } = useAuth();
+
   return (
     <nav className="bg-[#FBFAFA] sticky top-0 z-10" id="navbar">
       <div className="container py-2 pt-4 sm:py-4 flex flex-row items-center md:items-end justify-between gap-16">
@@ -74,18 +78,29 @@ export const Navbar: React.FC = () => {
               </svg>
               512-387-4314
             </Link>
-            <Link
-              className="font-semibold text-sm sm:text-base rounded-md py-2 px-3 text-primary border border-lightGrey"
-              href="/login"
-            >
-              Log in
-            </Link>
-            <Link
-              className="font-bold text-sm sm:text-base rounded-md py-2 px-3 bg-primary text-white max-md:hidden"
-              href="/register"
-            >
-              Register
-            </Link>
+            {!user ? (
+              <>
+                <button
+                  className="font-semibold text-sm sm:text-base rounded-md py-2 px-3 text-primary border border-lightGrey"
+                  onClick={loginWithGoogle}
+                >
+                  Log in with Google
+                </button>
+                <button
+                  className="font-bold text-sm sm:text-base rounded-md py-2 px-3 bg-primary text-white max-md:hidden"
+                  onClick={loginWithGoogle}
+                >
+                  Register
+                </button>
+              </>
+            ) : (
+              <button
+                className="font-semibold text-sm sm:text-base rounded-md py-2 px-3 text-primary border border-lightGrey"
+                onClick={logOut}
+              >
+                Log out
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -7,6 +7,7 @@ import { Navbar } from "@/modules/Navbar";
 import { Footer } from "@/modules/Footer";
 import clsx from "clsx";
 import { Chat } from "@/modules/chat";
+import { AuthProvider } from "@/context/AuthContext";
 
 const manrope = Manrope({
   weight: ["200", "400", "500", "600", "700", "800"],
@@ -58,18 +59,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={clsx(manrope.className)}>
-        <div className="bg-[#FBFAFA] relative min-h-[100dvh] flex w-full flex-col">
-          <JoinAlert />
-          <div className="flex w-full flex-col">
-            <Navbar />
-            {children}
-            <Footer />
+    <AuthProvider>
+      <html lang="en">
+        <body className={clsx(manrope.className)}>
+          <div className="bg-[#FBFAFA] relative min-h-[100dvh] flex w-full flex-col">
+            <JoinAlert />
+            <div className="flex w-full flex-col">
+              <Navbar />
+              {children}
+              <Footer />
+            </div>
+            <Chat />
           </div>
-          <Chat />
-        </div>
-      </body>
-    </html>
+        </body>
+      </html>
+    </AuthProvider>
   );
 }
