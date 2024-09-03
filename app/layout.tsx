@@ -6,6 +6,7 @@ import JoinAlert from "@/modules/JoinAlert";
 import { Navbar } from "@/modules/Navbar";
 import { Footer } from "@/modules/Footer";
 import clsx from "clsx";
+import { Chat } from "@/modules/chat";
 
 const manrope = Manrope({
   weight: ["200", "400", "500", "600", "700", "800"],
@@ -66,6 +67,7 @@ export default function RootLayout({
             {children}
             <Footer />
           </div>
+          <Chat />
         </div>
       </body>
     </html>

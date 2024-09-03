@@ -1,3 +1,4 @@
+"use client";
 import { Logo } from "@/components/Logo";
 import { AppBanner } from "@/modules/AppBanner";
 import { Hero } from "@/modules/Hero";

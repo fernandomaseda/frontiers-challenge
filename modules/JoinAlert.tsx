@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const JoinAlert: React.FC = () => {
   return (
-    <section className="flex bg-primary py-3 sticky top-0 z-[99999]">
+    <section className="flex bg-primary py-3 sticky top-0">
       <div className="container flex flex-row justify-between text-sm lg:text-base xl:translate-x-4">
         <Link className="flex justify-between md:w-full" href="/mobile-app">
           <div>
