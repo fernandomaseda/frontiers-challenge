@@ -51,6 +51,7 @@ export interface Message {
 export const useChatBot = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const { user } = useAuth();
+  const [saveMessagesFailed, setSaveMessagesFailed] = useState(false);
 
   const guestId = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -84,22 +85,29 @@ export const useChatBot = () => {
         postedAt: new Date().toISOString(),
       };
       try {
+        if (saveMessagesFailed) {
+          throw new Error("Failed to save messages"); // skip saving
+        }
         await addDoc(collection(db, collectionPath), newMessage);
       } catch (error) {
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          newMessage,
-          {
-            id: uuidv4(),
-            origin: "bot",
-            message:
-              "I'm sorry, I couldn't save your message however I will answer you.",
-            postedAt: new Date().toISOString(),
-          },
-        ]);
+        setMessages((prevMessages) => {
+          const newMessages = [...prevMessages, newMessage];
+          // fist time failure, notify the user
+          if (origin === "user" && !saveMessagesFailed) {
+            newMessages.push({
+              id: uuidv4(),
+              origin: "bot",
+              message:
+                "I'm sorry, I will not be able to save the chat history for this session.\nHowever I will answer your questions.",
+              postedAt: new Date().toISOString(),
+            });
+          }
+          setSaveMessagesFailed(true);
+          return newMessages;
+        });
       }
     },
-    [collectionPath]
+    [collectionPath, saveMessagesFailed]
   );
 
   useEffect(() => {
@@ -112,7 +120,7 @@ export const useChatBot = () => {
       setMessages(loadedMessages);
     });
     return () => unsubscribe();
-  }, [guestId, user]);
+  }, [collectionPath]);
 
   // Clear all messages from the chat
   const clearMessages = useCallback(async () => {
